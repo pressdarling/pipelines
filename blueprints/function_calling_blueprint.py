@@ -1,3 +1,4 @@
+import re
 from typing import List, Optional
 from pydantic import BaseModel
 from schemas import OpenAIChatMessage
@@ -98,6 +99,7 @@ And answer according to the language of the user's question.""",
 
         # Get the tools specs
         tools_specs = get_tools_specs(self.tools)
+<<<<<<< HEAD
 
         prompt = self.prompt.format(json.dumps(tools_specs, indent=2))
         content = "History:\n" + "\n".join(
@@ -138,6 +140,18 @@ And answer according to the language of the user's question.""",
             return messages
 
     def run_completion(self, system_prompt: str, content: str) -> dict:
+=======
+        # System prompt for function calling
+        fc_system_prompt = (
+            f"Tools: {json.dumps(tools_specs, indent=2)}"
+            + """
+If a function tool doesn't match the query, return an empty string. Else, pick a function tool, fill in the parameters from the function tool's schema, and return it in the format { "name": "functionName", "parameters": { "key": "value" } }. Only pick a function if the user asks. Only return the object. 
+Do not return any other text.
+Ensure that the model returns the correct function format regardless of the user's language.
+"""
+        )
+        #print(fc_system_prompt)
+>>>>>>> 4a16072 (custom RAG filter)
         r = None
         try:
             # Call the OpenAI API to get the function response
@@ -171,9 +185,39 @@ And answer according to the language of the user's question.""",
 
             # Parse the function response
             if content != "":
+                print(content)
+                content = re.sub(r"```json", "", content)
+                content = re.sub(r"```", "", content)
                 result = json.loads(content)
+<<<<<<< HEAD
                 print(result)
                 return result
+=======
+                #print(result)
+
+                # Call the function
+                if "name" in result:
+                    function = getattr(self.tools, result["name"])
+                    function_result = None
+                    try:
+                        function_result = function(**result["parameters"])
+                    except Exception as e:
+                        print(e)
+
+                    # Add the function result to the system prompt
+                    if function_result:
+                        system_prompt = self.valves.TEMPLATE.replace(
+                            "{{CONTEXT}}", function_result
+                        )
+
+                        #print(system_prompt)
+                        messages = add_or_update_system_message(
+                            system_prompt, body["messages"]
+                        )
+
+                        # Return the updated messages
+                        return {**body, "messages": messages}
+>>>>>>> 4a16072 (custom RAG filter)
 
         except Exception as e:
             print(f"Error: {e}")
