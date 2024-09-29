@@ -1,6 +1,7 @@
 .venv
 .env
 .git
+<<<<<<< HEAD
 .gitignore
 .github
 Dockerfile
@@ -9,3 +10,7 @@ docs
 *.md
 dev.sh
 dev-docker.sh
+=======
+.github
+Dockerfile
+>>>>>>> e75a97d (build: smaller container image)

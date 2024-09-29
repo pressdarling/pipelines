@@ -5,12 +5,17 @@ ARG MINIMUM_BUILD
 ARG USE_CUDA
 ARG USE_CUDA_VER
 
+<<<<<<< HEAD
 ## Basis ##
 ENV ENV=prod \
     PORT=9099 \
     # pass build args to the build
     MINIMUM_BUILD=${MINIMUM_BUILD} \
     USE_CUDA_DOCKER=${USE_CUDA} \
+=======
+# Pass build args to the build
+ENV USE_CUDA_DOCKER=${USE_CUDA} \
+>>>>>>> e75a97d (build: smaller container image)
     USE_CUDA_DOCKER_VER=${USE_CUDA_VER}
 
 # Install GCC and build tools. 
@@ -39,11 +44,17 @@ RUN if [ "$MINIMUM_BUILD" = "true" ]; then \
         uv pip install --system -r requirements.txt --no-cache-dir; \
     fi
 
-# Copy the application code
+FROM python:3.11-slim-bookworm AS final
+# Copy installed dependencies
+COPY --from=base /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=base /usr/local/include /usr/local/include
+COPY --from=base /usr/local/bin /usr/local/bin
 COPY . .
 
 # Expose the port
 ENV HOST="0.0.0.0"
 ENV PORT="9099"
+ENV ENV=prod
+ENV PORT=9099
 
 ENTRYPOINT [ "bash", "start.sh" ]
