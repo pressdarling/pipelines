@@ -11,6 +11,16 @@ from utils.pipelines.main import (
     get_tools_specs,
 )
 
+# System prompt for function calling
+DEFAULT_SYSTEM_PROMPT = (
+            """Tools: {}
+
+If a function tool doesn't match the query, return an empty string. Else, pick a
+function tool, fill in the parameters from the function tool's schema, and
+return it in the format {{ "name": \"functionName\", "parameters": {{ "key":
+"value" }} }}. Only pick a function if the user asks.  Only return the object. Do not return any other text."
+"""
+        )
 
 class Pipeline:
     class Valves(BaseModel):
@@ -29,7 +39,7 @@ class Pipeline:
         TASK_MODEL: str
         TEMPLATE: str
 
-    def __init__(self):
+    def __init__(self, prompt: str | None = None) -> None:
         # Pipeline filters are only compatible with Open WebUI
         # You can think of filter pipeline as a middleware that can be used to edit the form data before it is sent to the OpenAI API.
         self.type = "filter"
@@ -40,6 +50,8 @@ class Pipeline:
         # The identifier must be an alphanumeric string that can include underscores or hyphens. It cannot contain spaces, special characters, slashes, or backslashes.
         # self.id = "function_calling_blueprint"
         self.name = "Function Calling Blueprint"
+        self.prompt = prompt or DEFAULT_SYSTEM_PROMPT
+        self.tools: object = None
 
         # Initialize valves
         self.valves = self.Valves(
@@ -86,7 +98,52 @@ And answer according to the language of the user's question.""",
 
         # Get the tools specs
         tools_specs = get_tools_specs(self.tools)
+<<<<<<< HEAD
+<<<<<<< HEAD
 
+        prompt = self.prompt.format(json.dumps(tools_specs, indent=2))
+        content = "History:\n" + "\n".join(
+                                [
+                                    f"{message['role']}: {message['content']}"
+                                    for message in body["messages"][::-1][:4]
+                                ]
+                            ) + f"Query: {user_message}"
+
+        result = self.run_completion(prompt, content)
+        messages = self.call_function(result, body["messages"])
+
+        return {**body, "messages": messages}
+
+    # Call the function
+    def call_function(self, result, messages: list[dict]) -> list[dict]:
+        if "name" not in result:
+            return messages
+
+        function = getattr(self.tools, result["name"])
+        function_result = None
+        try:
+            function_result = function(**result["parameters"])
+        except Exception as e:
+            print(e)
+
+        # Add the function result to the system prompt
+        if function_result:
+            system_prompt = self.valves.TEMPLATE.replace(
+                "{{CONTEXT}}", function_result
+            )
+
+            messages = add_or_update_system_message(
+                system_prompt, messages
+            )
+
+            # Return the updated messages
+            return messages
+
+    def run_completion(self, system_prompt: str, content: str) -> dict:
+=======
+=======
+
+>>>>>>> 9bb6a81 (rag)
         # System prompt for function calling
         fc_system_prompt = (
             f"Tools: {json.dumps(tools_specs, indent=2)}"
@@ -94,7 +151,12 @@ And answer according to the language of the user's question.""",
 If a function tool doesn't match the query, return an empty string. Else, pick a function tool, fill in the parameters from the function tool's schema, and return it in the format { "name": \"functionName\", "parameters": { "key": "value" } }. Only pick a function if the user asks.  Only return the object. Do not return any other text."
 """
         )
+<<<<<<< HEAD
+        #print(fc_system_prompt)
+>>>>>>> 4a16072 (custom RAG filter)
+=======
 
+>>>>>>> 9bb6a81 (rag)
         r = None
         try:
             # Call the OpenAI API to get the function response
@@ -105,18 +167,11 @@ If a function tool doesn't match the query, return an empty string. Else, pick a
                     "messages": [
                         {
                             "role": "system",
-                            "content": fc_system_prompt,
+                            "content": system_prompt,
                         },
                         {
                             "role": "user",
-                            "content": "History:\n"
-                            + "\n".join(
-                                [
-                                    f"{message['role']}: {message['content']}"
-                                    for message in body["messages"][::-1][:4]
-                                ]
-                            )
-                            + f"Query: {user_message}",
+                            "content": content,
                         },
                     ],
                     # TODO: dynamically add response_format?
@@ -136,7 +191,15 @@ If a function tool doesn't match the query, return an empty string. Else, pick a
             # Parse the function response
             if content != "":
                 result = json.loads(content)
+<<<<<<< HEAD
+<<<<<<< HEAD
                 print(result)
+                return result
+=======
+                #print(result)
+=======
+                print(result)
+>>>>>>> 9bb6a81 (rag)
 
                 # Call the function
                 if "name" in result:
@@ -160,6 +223,7 @@ If a function tool doesn't match the query, return an empty string. Else, pick a
 
                         # Return the updated messages
                         return {**body, "messages": messages}
+>>>>>>> 4a16072 (custom RAG filter)
 
         except Exception as e:
             print(f"Error: {e}")
@@ -170,4 +234,8 @@ If a function tool doesn't match the query, return an empty string. Else, pick a
                 except:
                     pass
 
+<<<<<<< HEAD
+        return {}
+=======
         return body
+>>>>>>> 9bb6a81 (rag)
